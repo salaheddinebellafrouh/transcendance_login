@@ -1,0 +1,216 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #153050, #3bb1f4, #153050, #153050, #153050, #3bb1f4, #153050);
+    min-height: 100vh;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #ff69b4;
+    object-fit: cover;
+}
+
+.player-name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 500;
+}
+
+.settings i {
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.settings i:hover {
+    transform: rotate(90deg);
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 5rem;
+    font-weight: 700;
+    margin-bottom: 4rem;
+    background: linear-gradient(45deg, #ff69b4, #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+}
+
+.game-modes {
+    display: flex;
+    gap: 2rem;
+}
+
+.mode-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 250px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mode-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(255, 105, 180, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-card h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #ff69b4;
+}
+
+.mode-card .mode-title {
+    font-size: 2rem;
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .game-modes {
+        flex-direction: column;
+    }
+
+    .mode-card {
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .logo {
+        font-size: 3rem;
+        margin-bottom: 2rem;
+    }
+}
+
+.view {
+    width: 100%;
+    min-height: calc(100vh - 70px); /* Account for header height */
+}
+
+.section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    margin-bottom: 2rem;
+    background: linear-gradient(45deg, #ff69b4, #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 10px rgba(255, 105, 180, 0.3);
+}
+
+.game-container, .tournament-container {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+}
+
+.game-options, .tournament-options {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.game-button {
+    padding: 0.8rem 1.5rem;
+    background: rgba(255, 105, 180, 0.8);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.game-button:hover {
+    background: rgba(255, 105, 180, 1);
+    transform: translateY(-3px);
+}
+
+.game-button.secondary {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.game-button.secondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.game-canvas, .tournament-bracket {
+    width: 100%;
+    height: 500px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-placeholder, .tournament-placeholder {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.game-placeholder i, .tournament-placeholder i {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 2rem;
+    }
+    
+    .game-options, .tournament-options {
+        flex-direction: column;
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .game-canvas, .tournament-bracket {
+        height: 350px;
+    }
+} 
