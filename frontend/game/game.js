@@ -1,31 +1,24 @@
 // PONG Game Implementation
-const Game = {
-    // Game state
+window.Game = {
     initialized: false,
     finished: false,
     
-    // Game settings
-    settings: {
-        winningScore: 5,
-        maxAngle: 5 * Math.PI / 12,
-        arenaWidth: 800,
-        arenaHeight: 500,
-        paddleWidth: 20,
-        paddleHeight: 100,
-        ballSize: 20
+    // Game variables
+    gameVars: {
+        score: 1,
+        otherScore: 1,
+        WINNING_SCORE: 5,
+        MAX_ANGLE: 5 * Math.PI / 12,
+        angle: -Math.PI / 7,
+        // Fixed dimensions
+        ARENA_WIDTH: 800,
+        ARENA_HEIGHT: 500,
+        PADDLE_WIDTH: 20,
+        PADDLE_HEIGHT: 200,
+        BALL_SIZE: 20
     },
     
-    // Game data
-    data: {
-        score1: 0,
-        score2: 0,
-        angle: -Math.PI / 7
-    },
-    
-    // Game objects
-    objects: null,
-    
-    // Animation frame ID for cleanup
+    gameObjects: null,
     animationId: null,
     
     // Initialize game
@@ -37,55 +30,20 @@ const Game = {
             this.cleanup();
         }
         
-        // Get game elements
-        if (!this.getElements()) {
-            console.log('Game elements not found, retrying...');
+        // Wait for DOM elements to be ready
+        if (!document.querySelector('.arena')) {
+            console.log('Game elements not ready, waiting...');
             setTimeout(() => this.init(), 100);
             return;
         }
         
-        // Reset game state
-        this.data.score1 = 0;
-        this.data.score2 = 0;
-        this.finished = false;
-        
-        // Get match data
-        const matchData = this.getMatchData();
-        
-        // Set player names
-        this.updatePlayerNames(matchData);
-        
-        // Set winning score for tournament matches
-        if (matchData.isTournament) {
-            this.settings.winningScore = 3;
-        }
-        
-        // Reset arena
-        this.resetArena();
-        
-        // Initialize game objects
-        this.initializeGameObjects();
-        
-        // Set up controls
-        this.setupControls();
-        
-        // Start game loop
-        this.startGameLoop();
-        
-        // Mark as initialized
         this.initialized = true;
         
-        console.log('Game initialized with match data:', matchData);
-    },
-    
-    // Get game elements
-    getElements: function() {
-        // Wait for elements to be available
-        const arena = document.querySelector('.arena');
-        if (!arena) return false;
-        
+        // Initialize game elements
         this.elements = {
-            arena: arena,
+            player: document.querySelector(".player"),
+            arena: document.querySelector(".arena"),
+            ball: document.querySelector(".ball"),
             playerScore: document.querySelector('#score1'),
             computerScore: document.querySelector('#score2'),
             player1Name: document.querySelector('#player1Name span'),
@@ -93,379 +51,362 @@ const Game = {
             finishButton: document.getElementById('finishGame')
         };
         
-        return true;
+        // Hide finish button initially
+        if (this.elements.finishButton) {
+            this.elements.finishButton.style.display = 'none';
+        }
+        
+        // Reset scores
+        if (this.elements.playerScore) this.elements.playerScore.textContent = '0';
+        if (this.elements.computerScore) this.elements.computerScore.textContent = '0';
+        
+        // Check for tournament match
+        const matchData = this.getMatchData();
+        
+        // Set winning score for tournament matches if needed
+        if (matchData.isTournament) {
+            this.gameVars.WINNING_SCORE = 3;
+        }
+        
+        // Setup player names
+        this.setupPlayerNames();
+        
+        // Initialize game objects
+        this.setupGameObjects();
+        
+        // Setup controls
+        this.setupControls();
+        
+        // Start game loop
+        this.startGameLoop();
     },
     
     // Get match data from localStorage
     getMatchData: function() {
-        const matchData = JSON.parse(localStorage.getItem('currentMatch') || '{}');
+        const currentMatch = JSON.parse(localStorage.getItem('currentMatch') || '{}');
         
-        // If no player1, use logged-in user
-        if (!matchData.player1) {
+        // If no match data, use defaults
+        if (!currentMatch.player1) {
             const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-            matchData.player1 = userData.name || 'Player 1';
+            const playerName = userData.name || document.getElementById('userName')?.textContent || 'Player 1';
+            
+            return {
+                player1: playerName,
+                player2: 'Player 2',
+                isTournament: false
+            };
         }
         
-        // If no player2, use default
-        if (!matchData.player2) {
-            matchData.player2 = 'Player 2';
-        }
-        
-        return matchData;
+        return {
+            ...currentMatch,
+            isTournament: !!currentMatch.id // It's a tournament match if it has an ID
+        };
     },
     
-    // Update player names
-    updatePlayerNames: function(matchData) {
-        if (this.elements.player1Name) {
-            this.elements.player1Name.textContent = matchData.player1;
+    // Setup player names
+    setupPlayerNames: function() {
+        const currentMatch = JSON.parse(localStorage.getItem('currentMatch') || '{}');
+        if (currentMatch && currentMatch.player1 && this.elements.player1Name) {
+            this.elements.player1Name.textContent = currentMatch.player1;
         }
-        
-        if (this.elements.player2Name) {
-            this.elements.player2Name.textContent = matchData.player2;
+        if (currentMatch && currentMatch.player2 && this.elements.player2Name) {
+            this.elements.player2Name.textContent = currentMatch.player2;
         }
-        
-        // Reset score display
-        if (this.elements.playerScore) {
-            this.elements.playerScore.textContent = '0';
-        }
-        
-        if (this.elements.computerScore) {
-            this.elements.computerScore.textContent = '0';
-        }
-    },
-    
-    // Reset arena
-    resetArena: function() {
-        const arena = this.elements.arena;
-        if (!arena) return;
-        
-        // Clear and rebuild arena contents with TWO player elements
-        arena.innerHTML = `
-            <div class="player player1"></div>
-            <div class="player player2"></div>
-            <div class="ball"></div>
-            <div class="half-line"></div>
-        `;
     },
     
     // Initialize game objects
-    initializeGameObjects: function() {
-        // Prepare game classes
-        class GameObject {
-            constructor() {
-                this.x = 0;
-                this.y = 0;
-                this.Width = 0;
-                this.Height = 0;
-                this.element = null;
-                this.speed = 0;
-            }
-            
-            updatePosition() {
-                if (this.element) {
-                    this.element.style.left = `${this.x - this.Width / 2}px`;
-                    this.element.style.top = `${this.y - this.Height / 2}px`;
-                }
-            }
-        }
+    setupGameObjects: function() {
+        const self = this;
+        let FistPlayer = 0;
         
-        class PlayerObj extends GameObject {
-            constructor(elementSelector) {
-                super();
-                this.element = document.querySelector(elementSelector);
-                this.Width = Game.settings.paddleWidth;
-                this.Height = Game.settings.paddleHeight;
-                this.speed = 10;
-                this.upKey = 'w';
-                this.downKey = 's';
-                this.keys = {};
-                this.name = 'player';
-                this.x = this.Width / 2 + 20;
-                this.y = Game.elements.arena.clientHeight / 2;
-                this.updatePosition();
-                
-                // Set up key event handlers
-                this.setupEventListeners();
-            }
-            
-            setupEventListeners() {
-                window.addEventListener('keydown', (e) => {
-                    this.keys[e.key.toLowerCase()] = true;
-                });
-                
-                window.addEventListener('keyup', (e) => {
-                    this.keys[e.key.toLowerCase()] = false;
-                });
-            }
-            
-            setNewKey(up, down) {
-                this.upKey = up.toLowerCase();
-                this.downKey = down.toLowerCase();
-            }
-            
-            setName(name) {
-                this.name = name;
-            }
-            
-            setNewX(x) {
-                this.x = x;
-                this.updatePosition();
-            }
-            
-            movePlayer() {
-                const arenaHeight = Game.elements.arena.clientHeight;
-                
-                if (this.keys[this.upKey] && this.y - this.Height / 2 > 0) {
-                    this.y -= this.speed;
+        class PlayerObj {
+            constructor() {
+                this.Name = "Player";
+                this.MoveUp = false;
+                this.MoveDown = false;
+                this.keyUP = 'w';
+                this.keyDown = 's';
+                this.speed = 14;
+                if(!FistPlayer){
+                    this.element = self.elements.player.cloneNode(true);
+                    self.elements.arena.appendChild(this.element);
+                    FistPlayer = 1;
                 }
-                
-                if (this.keys[this.downKey] && this.y + this.Height / 2 < arenaHeight) {
-                    this.y += this.speed;
+                else{
+                    this.element = self.elements.player;
                 }
-                
-                // AI for player 2
-                if (this.name === 'computer') {
-                    const ball = Game.objects.ball;
-                    
-                    // Simple AI - follow the ball with slight delay
-                    if (Math.abs(this.y - ball.y) > this.Height / 6) {
-                        if (this.y < ball.y) {
-                            this.y += this.speed * 0.7;
-                        } else {
-                            this.y -= this.speed * 0.7;
-                        }
+                this.Height = this.element.clientHeight;
+                this.Width = this.element.clientWidth;
+                this.x = -this.Width / 2;
+                this.y = self.elements.arena.clientHeight / 2 - this.Height / 2;
+                this.element.style.left = `${this.x}px`;
+                this.setupControls();
+            }
+            
+            movePlayer(){
+                if (this.MoveUp)
+                    this.y = Math.max(this.y - this.speed, 0);
+                if (this.MoveDown)
+                    this.y = Math.min(this.y + this.speed, self.elements.arena.clientHeight - this.Height);
+                this.element.style.top =`${this.y}px`;
+            }
+            
+            setNewKey(newKeyUp, newKeyDown) {
+                this.keyUP = newKeyUp;
+                this.keyDown = newKeyDown;
+            }
+            
+            setNewX(newPostionX) {
+                this.x = newPostionX;
+                this.element.style.left = `${newPostionX}px`;
+            }
+            
+            setName(newName) {
+                this.Name = newName;
+            }
+            
+            setupControls() {
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === this.keyUP) {
+                        this.MoveUp = true;
+                    } else if (event.key === this.keyDown) {
+                        this.MoveDown = true;
                     }
-                }
+                });
                 
-                this.updatePosition();
+                document.addEventListener('keyup', (event) => {
+                    if (event.key === this.keyUP) {
+                        this.MoveUp = false;
+                    } else if (event.key === this.keyDown) {
+                        this.MoveDown = false;
+                    }
+                });
             }
         }
         
-        class BallObj extends GameObject {
+        class BallObj {
             constructor() {
-                super();
-                this.element = document.querySelector('.ball');
-                this.Width = Game.settings.ballSize;
-                this.Height = Game.settings.ballSize;
-                this.speed = 7;
-                this.xDirection = 1;
-                this.yDirection = Math.random() < 0.5 ? -1 : 1;
-                this.x = Game.elements.arena.clientWidth / 2;
-                this.y = Game.elements.arena.clientHeight / 2;
-                this.updatePosition();
+                this.Name = "ball";
+                this.x = self.elements.arena.clientWidth / 2 - self.elements.ball.clientWidth / 2;
+                this.y = self.elements.arena.clientHeight / 2 - self.elements.ball.clientHeight / 2;
+                this.speed = 4;
+                this.r = self.elements.ball.clientWidth;
+                
+                self.elements.ball.style.left = `${this.x}px`;
+                self.elements.ball.style.top = `${this.y}px`;
             }
             
-            reset() {
-                this.x = Game.elements.arena.clientWidth / 2;
-                this.y = Game.elements.arena.clientHeight / 2;
-                this.xDirection = this.xDirection > 0 ? -1 : 1; // Serve to the other player
-                this.yDirection = Math.random() < 0.5 ? -1 : 1;
-                this.updatePosition();
-            }
-            
-            moveBall(player1, player2) {
-                const arenaWidth = Game.elements.arena.clientWidth;
-                const arenaHeight = Game.elements.arena.clientHeight;
+            moveBall(p1, p2){
+                this.x = this.x + this.speed * Math.cos(self.gameVars.angle);
+                this.y = this.y - this.speed * Math.sin(self.gameVars.angle);
                 
-                // Update position
-                this.x += this.speed * this.xDirection;
-                this.y += this.speed * this.yDirection * Math.sin(Game.data.angle);
+                self.elements.ball.style.left = `${this.x}px`;
+                self.elements.ball.style.top = `${this.y}px`;
                 
-                // Handle wall collisions
-                if (this.y - this.Height / 2 < 0 || this.y + this.Height / 2 > arenaHeight) {
-                    this.yDirection *= -1;
+                if (this.y > self.elements.arena.clientHeight - 15 || this.y <= 0) {
+                    self.gameVars.angle = (self.gameVars.angle * -1) % (Math.PI * 2);
                 }
-                
-                // Handle scoring (left wall)
-                if (this.x - this.Width / 2 < 0) {
-                    Game.updateScore('player2');
-                    this.reset();
-                    return;
+                else if(this.x > self.elements.arena.clientWidth - p2.Width / 2 - 1 - this.r && 
+                        Math.abs(this.y - (p2.y + p2.Height / 2)) <= p2.Height / 2) {
+                    this.speed *= 1.05;
+                    self.gameVars.angle = (this.y - (p2.y + p2.Height / 2)) / (p2.Height / 2) * self.gameVars.MAX_ANGLE - Math.PI;
                 }
-                
-                // Handle scoring (right wall)
-                if (this.x + this.Width / 2 > arenaWidth) {
-                    Game.updateScore('player1');
-                    this.reset();
-                    return;
+                else if(this.x < p1.Width / 2 + 1 && Math.abs(this.y - (p1.y + p1.Height / 2)) <= p1.Height / 2) {
+                    this.speed *= 1.05;
+                    self.gameVars.angle = -(this.y - (p1.y + p1.Height / 2)) / (p1.Height / 2) * self.gameVars.MAX_ANGLE;
                 }
-                
-                // Check collision with player 1
-                if (this.checkCollision(player1)) {
-                    this.xDirection = 1;
-                    Game.data.angle = ((this.y - player1.y) / player1.Height) * Game.settings.maxAngle;
+                else if(this.x < 0) {
+                    this.speed = 4;
+                    self.gameVars.angle = Math.PI / 7;
+                    this.x = self.elements.arena.clientWidth / 2 - self.elements.ball.clientWidth / 2;
+                    this.y = self.elements.arena.clientHeight / 2 - self.elements.ball.clientHeight / 2;
+                    self.elements.computerScore.textContent = self.gameVars.score;
+                    self.gameVars.score++;
+                    
+                    // Check for game end
+                    self.checkGameEnd();
                 }
-                
-                // Check collision with player 2
-                if (this.checkCollision(player2)) {
-                    this.xDirection = -1;
-                    Game.data.angle = ((this.y - player2.y) / player2.Height) * Game.settings.maxAngle;
+                else if(this.x >= self.elements.arena.clientWidth - this.r) {
+                    this.speed = 4;
+                    self.gameVars.angle = Math.PI - Math.PI / 7;
+                    this.x = self.elements.arena.clientWidth / 2 - self.elements.ball.clientWidth / 2;
+                    this.y = self.elements.arena.clientHeight / 2 - self.elements.ball.clientHeight / 2;
+                    self.elements.playerScore.textContent = self.gameVars.otherScore;
+                    self.gameVars.otherScore++;
+                    
+                    // Check for game end
+                    self.checkGameEnd();
                 }
-                
-                this.updatePosition();
-            }
-            
-            checkCollision(player) {
-                return (
-                    this.x - this.Width / 2 < player.x + player.Width / 2 &&
-                    this.x + this.Width / 2 > player.x - player.Width / 2 &&
-                    this.y - this.Height / 2 < player.y + player.Height / 2 &&
-                    this.y + this.Height / 2 > player.y - player.Height / 2
-                );
             }
         }
         
-        // Create game objects with the correct element selectors
-        this.objects = {
-            player1: new PlayerObj('.player1'),
-            player2: new PlayerObj('.player2'),
+        // Initialize game objects
+        this.gameObjects = {
+            p1: new PlayerObj(),
+            p2: new PlayerObj(),
             ball: new BallObj()
         };
         
-        // Configure player 2
-        this.objects.player2.setNewKey('ArrowUp', 'ArrowDown');
-        this.objects.player2.setName('computer');
-        this.objects.player2.setNewX(this.elements.arena.clientWidth - this.objects.player2.Width / 2 - 20);
-        this.objects.player2.element.style.background = '#032a6ceb';
+        // Setup player 2
+        this.gameObjects.p2.setNewKey('ArrowUp', 'ArrowDown');
+        this.gameObjects.p2.setName('computer');
+        this.gameObjects.p2.setNewX(this.elements.arena.clientWidth - this.gameObjects.p2.Width / 2);
+        this.gameObjects.p2.element.style.background = '#032a6ceb';
     },
     
-    // Set up game controls
-    setupControls: function() {
-        const finishButton = this.elements.finishButton;
-        if (finishButton) {
-            finishButton.style.display = 'none';
-            
-            finishButton.onclick = () => {
-                if (this.finished) {
-                    this.cleanup();
-                    if (typeof window.showView === 'function') {
-                        window.showView('home');
+    // Check if game has ended
+    checkGameEnd: function() {
+        if (this.gameVars.score >= this.gameVars.WINNING_SCORE || 
+            this.gameVars.otherScore >= this.gameVars.WINNING_SCORE) {
+            if (!this.finished) {
+                this.finished = true;
+                
+                // Get match data
+                const currentMatch = JSON.parse(localStorage.getItem('currentMatch') || '{}');
+                
+                // Determine the winner
+                const winner = this.gameVars.score > this.gameVars.otherScore ? 
+                    currentMatch.player2 : currentMatch.player1;
+                
+                // Format the score (swap if needed to show winner's score first)
+                const score = this.gameVars.score > this.gameVars.otherScore ? 
+                    `${this.gameVars.score}-${this.gameVars.otherScore}` : 
+                    `${this.gameVars.otherScore}-${this.gameVars.score}`;
+                
+                // Store match result for tournament
+                localStorage.setItem('matchResult', JSON.stringify({
+                    winner: winner,
+                    score: score,
+                    matchId: currentMatch.id
+                }));
+                
+                // Show finish button
+                if (this.elements.finishButton) {
+                    if (currentMatch.id) {
+                        // Tournament match
+                        this.elements.finishButton.textContent = `${winner} wins! Return to Tournament`;
                     } else {
-                        window.location.href = '#home';
+                        // Normal match
+                        this.elements.finishButton.textContent = 'Return to Home';
                     }
+                    this.elements.finishButton.style.display = 'flex';
                 }
-            };
+            }
         }
     },
     
     // Start game loop
     startGameLoop: function() {
-        const self = this;
-        
-        function loop() {
-            if (!self.finished) {
-                self.objects.player1.movePlayer();
-                self.objects.player2.movePlayer();
-                self.objects.ball.moveBall(self.objects.player1, self.objects.player2);
-                self.animationId = requestAnimationFrame(loop);
+        const loop = () => {
+            if (!this.finished) {
+                this.gameObjects.p1.movePlayer();
+                this.gameObjects.p2.movePlayer();
+                this.gameObjects.ball.moveBall(this.gameObjects.p1, this.gameObjects.p2);
+                this.animationId = requestAnimationFrame(loop);
             }
-        }
+        };
         
         this.animationId = requestAnimationFrame(loop);
     },
     
-    // Update score
-    updateScore: function(player) {
-        if (player === 'player1') {
-            this.data.score1++;
-            if (this.elements.playerScore) {
-                this.elements.playerScore.textContent = this.data.score1;
-            }
-            
-            if (this.data.score1 >= this.settings.winningScore) {
-                this.handleGameEnd();
-            }
-        } else {
-            this.data.score2++;
-            if (this.elements.computerScore) {
-                this.elements.computerScore.textContent = this.data.score2;
-            }
-            
-            if (this.data.score2 >= this.settings.winningScore) {
-                this.handleGameEnd();
-            }
-        }
-    },
-    
-    // Handle game end
-    handleGameEnd: function() {
-        if (this.finished) return;
-        
-        this.finished = true;
-        
-        // Determine winner
-        const player1Score = this.data.score1;
-        const player2Score = this.data.score2;
-        const player1Name = this.elements.player1Name.textContent.trim();
-        const player2Name = this.elements.player2Name.textContent.trim();
-        
-        let winner, score;
-        
-        if (player1Score > player2Score) {
-            winner = player1Name;
-            score = `${player1Score}-${player2Score}`;
-        } else {
-            winner = player2Name;
-            score = `${player2Score}-${player1Score}`;
-        }
-        
-        // Check if this is a tournament match
-        const currentMatch = JSON.parse(localStorage.getItem('currentMatch') || '{}');
-        if (currentMatch.isTournament) {
-            // Store match result for tournament
-            localStorage.setItem('matchResult', JSON.stringify({
-                winner: winner,
-                score: score
-            }));
-            
-            // Return to tournament view after delay
-            setTimeout(() => {
-                if (typeof window.showView === 'function') {
-                    window.showView('tournament');
+    // Setup control buttons
+    setupControls: function() {
+        // Finish button
+        if (this.elements.finishButton) {
+            this.elements.finishButton.addEventListener('click', () => {
+                // Get match data to determine where to return
+                const currentMatch = JSON.parse(localStorage.getItem('currentMatch') || '{}');
+                
+                // Clean up game
+                this.cleanup();
+                
+                // Navigate based on match type
+                if (currentMatch.id) {
+                    // Tournament match - return to tournament
+                    if (typeof window.showView === 'function') {
+                        window.showView('tournament');
+                    } else {
+                        window.location.href = '/tournament';
+                    }
                 } else {
-                    window.location.href = '#tournament';
+                    // Normal match - return to home
+                    if (typeof window.showView === 'function') {
+                        window.showView('home');
+                    } else {
+                        window.location.href = '/home';
+                    }
                 }
-            }, 1500);
-        } else {
-            // Show finish button for normal games
-            if (this.elements.finishButton) {
-                this.elements.finishButton.style.display = 'flex';
-            }
+            });
         }
+        
+        // Store event handlers for cleanup
+        this._keydownHandler = (event) => {
+            if (event.key === 'Escape') {
+                this.cleanup();
+                window.showView('home');
+            }
+        };
+        
+        // Add event listeners
+        document.addEventListener('keydown', this._keydownHandler);
     },
     
     // Clean up game
     cleanup: function() {
+        // Cancel animation frame
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
         
+        // Remove event listeners
+        document.removeEventListener('keydown', this._keydownHandler);
+        
+        // Reset game state
+        this.gameVars.score = 1;
+        this.gameVars.otherScore = 1;
+        this.gameVars.angle = -Math.PI / 7;
+        
+        // Reset flags
         this.initialized = false;
         this.finished = false;
-        this.objects = null;
         
-        // Reset data
-        this.data = {
-            score1: 0,
-            score2: 0,
-            angle: -Math.PI / 7
-        };
+        // Clear game objects
+        this.gameObjects = null;
         
         // Hide finish button
         if (this.elements && this.elements.finishButton) {
             this.elements.finishButton.style.display = 'none';
         }
+    },
+    
+    // Reset game
+    reset: function() {
+        this.cleanup();
+        this.gameVars = {
+            score: 1,
+            otherScore: 1,
+            WINNING_SCORE: 5,
+            MAX_ANGLE: 5 * Math.PI / 12,
+            angle: -Math.PI / 7,
+            ARENA_WIDTH: 800,
+            ARENA_HEIGHT: 500,
+            PADDLE_WIDTH: 20,
+            PADDLE_HEIGHT: 200,
+            BALL_SIZE: 20
+        };
     }
 };
 
-// Export game functions to window
+// Export game functions
 window.initializeGame = function() {
-    Game.init();
+    window.Game.init();
 };
 
 window.cleanupGame = function() {
-    Game.cleanup();
+    window.Game.cleanup();
 };
 
-window.Game = Game; 
+window.resetGame = function() {
+    window.Game.reset();
+}; 

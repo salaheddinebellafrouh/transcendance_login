@@ -268,8 +268,10 @@ function createTournament() {
     loadTournamentResources();
 }
 
-// Update the loadTournamentResources function to ensure handlers are attached
+// Helper function to load tournament resources
 function loadTournamentResources(callback) {
+    console.log("Loading tournament resources");
+    
     // Load tournament CSS
     if (!document.getElementById('tournamentCssLoaded')) {
         const tournamentCss = document.createElement('link');
@@ -284,47 +286,30 @@ function loadTournamentResources(callback) {
         const tournamentScript = document.createElement('script');
         tournamentScript.src = '../tournament/tournament.js';
         tournamentScript.onload = function() {
+            console.log("Tournament script loaded");
             window.tournamentInitialized = true;
             
-            // Call the callback after a short delay to ensure everything is initialized
+            // Initialize tournament after a short delay to ensure DOM is ready
             setTimeout(() => {
-                if (typeof callback === 'function') {
-                    callback();
+                if (typeof window.setupTournamentDirectly === 'function') {
+                    console.log("Initializing tournament directly");
+                    window.setupTournamentDirectly();
                 }
                 
-                // Directly call tournament setup
-                if (typeof window.setupTournamentDirectly === 'function') {
-                    window.setupTournamentDirectly();
-                    
-                    // Ensure restart button has handler
-                    const restartButton = document.querySelector('.restart-tournament-btn');
-                    if (restartButton) {
-                        restartButton.onclick = function() {
-                            // Reset tournament state
-                            if (typeof window.resetTournament === 'function') {
-                                window.resetTournament();
-                            } else {
-                                // Fallback reset
-                                localStorage.removeItem('tournamentState');
-                                document.querySelector('.setup-section').classList.remove('hide');
-                                document.querySelector('.tournament-container').classList.remove('show');
-                                document.querySelector('.player-inputs').classList.remove('show');
-                            }
-                        };
-                    }
+                if (typeof callback === 'function') {
+                    callback();
                 }
             }, 100);
         };
         document.body.appendChild(tournamentScript);
     } else {
         // Scripts already loaded, just call the callback
-        if (typeof callback === 'function') {
-            callback();
-        }
-        
-        // Make sure tournament is set up
         if (typeof window.setupTournamentDirectly === 'function') {
             window.setupTournamentDirectly();
+        }
+        
+        if (typeof callback === 'function') {
+            setTimeout(callback, 10);
         }
     }
 }

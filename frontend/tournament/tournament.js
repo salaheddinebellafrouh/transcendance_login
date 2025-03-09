@@ -1,4 +1,4 @@
-// Tournament System - Clean Implementation
+// Tournament System
 const Tournament = {
     // Tournament state
     state: {
@@ -18,11 +18,11 @@ const Tournament = {
         // Try to restore state if exists
         this.loadState();
         
-        // Update UI based on current state
-        this.updateUI();
-        
         // Check for match results
         this.checkMatchResults();
+        
+        // Update UI based on current state
+        this.updateUI();
     },
     
     // Attach all event listeners
@@ -86,418 +86,374 @@ const Tournament = {
         `;
         container.appendChild(userInputDiv);
         
-        // Create remaining player inputs
+        // Create remaining player inputs with AI players by default
         for (let i = 1; i < count; i++) {
             const inputDiv = document.createElement('div');
             inputDiv.className = 'player-input';
-            inputDiv.innerHTML = `<input type="text" placeholder="Player ${i+1} Name" class="player-name-input">`;
+            inputDiv.innerHTML = `<input type="text" value="AI Player ${i}" class="player-name-input">`;
             container.appendChild(inputDiv);
         }
     },
     
-    // Generate tournament structure
+    // Generate tournament from player inputs
     generateTournament: function() {
-        // Validate all player names are filled in
-        if (!this.validatePlayerNames()) {
+        // Get player names from inputs
+        const inputs = document.querySelectorAll('.player-name-input');
+        const players = [];
+        let allFilled = true;
+        
+        inputs.forEach(input => {
+            const name = input.value.trim();
+            if (!name) {
+                allFilled = false;
+            } else {
+                players.push(name);
+            }
+        });
+        
+        // Check that all inputs are filled
+        if (!allFilled) {
+            document.querySelector('.error-message').classList.add('show');
             return;
+        } else {
+            document.querySelector('.error-message').classList.remove('show');
         }
         
-        // Update progress step
-        this.setActiveStep(2);
+        // Randomize player order (except the first player who is always the user)
+        const firstPlayer = players[0];
+        const otherPlayers = this.shuffleArray(players.slice(1));
+        this.state.players = [firstPlayer, ...otherPlayers];
         
-        // Create tournament bracket structure
-        this.createBracketStructure();
+        // Generate rounds
+        this.generateRounds();
         
         // Show tournament bracket
         this.showBracket();
         
-        // Save state
-        this.saveState();
-    },
-    
-    // Validate player names
-    validatePlayerNames: function() {
-        const inputs = document.querySelectorAll('.player-name-input');
-        const errorMessage = document.querySelector('.error-message');
-        
-        // Get all player names
-        this.state.players = [];
-        let allValid = true;
-        
-        inputs.forEach(input => {
-            const name = input.value.trim();
-            if (name === '') {
-                allValid = false;
-            } else {
-                this.state.players.push(name);
-            }
-        });
-        
-        // Show/hide error message
-        if (!allValid) {
-            errorMessage.classList.add('show');
-            return false;
-        } else {
-            errorMessage.classList.remove('show');
-            return true;
-        }
-    },
-    
-    // Create bracket structure
-    createBracketStructure: function() {
-        // Get logged in user
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const loggedInUserName = userData.name || document.getElementById('userName').textContent || 'Player 1';
-        
-        // Make sure logged in user is first
-        const players = [...this.state.players];
-        const userIndex = players.findIndex(name => name === loggedInUserName);
-        if (userIndex > 0) {
-            players.splice(userIndex, 1);
-            players.unshift(loggedInUserName);
-        }
-        
-        // Randomize other players
-        const otherPlayers = players.slice(1);
-        this.shuffleArray(otherPlayers);
-        this.state.players = [loggedInUserName, ...otherPlayers];
-        
-        // Reset tournament data
-        this.state.rounds = [];
-        this.state.currentMatchId = null;
-        this.state.isComplete = false;
-        
-        // Create first round
-        const firstRound = [];
-        for (let i = 0; i < this.state.players.length; i += 2) {
-            const match = {
-                id: `r0m${i/2}`,
-                player1: this.state.players[i],
-                player2: i + 1 < this.state.players.length ? this.state.players[i + 1] : null,
-                winner: i + 1 >= this.state.players.length ? this.state.players[i] : null,
-                score: i + 1 >= this.state.players.length ? 'W-0' : null,
-                isComplete: i + 1 >= this.state.players.length
-            };
-            firstRound.push(match);
-        }
-        this.state.rounds.push(firstRound);
-        
-        // Create subsequent rounds
-        let roundIndex = 1;
-        let matchesInRound = Math.ceil(firstRound.length / 2);
-        
-        while (matchesInRound > 0) {
-            const round = [];
-            for (let i = 0; i < matchesInRound; i++) {
-                round.push({
-                    id: `r${roundIndex}m${i}`,
-                    player1: null,
-                    player2: null,
-                    winner: null,
-                    score: null,
-                    isComplete: false
-                });
-            }
-            this.state.rounds.push(round);
-            matchesInRound = Math.ceil(matchesInRound / 2);
-            roundIndex++;
-        }
-        
-        // Advance players with byes
-        this.advanceWinners();
-    },
-    
-    // Show the tournament bracket
-    showBracket: function() {
-        // Hide setup, show bracket
+        // Hide setup section, show tournament bracket
         document.querySelector('.setup-section').classList.add('hide');
         document.querySelector('.tournament-container').classList.add('show');
         
-        // Render the bracket
-        this.renderBracket();
+        // Show start button
+        document.querySelector('.start-button').style.display = 'block';
         
-        // Update start button
-        this.updateStartButton();
+        // Update progress steps
+        this.setActiveStep(2);
+        
+        // Save tournament state
+        this.saveState();
     },
     
-    // Render the tournament bracket
-    renderBracket: function() {
-        const bracketContainer = document.getElementById('tournament-bracket');
-        if (!bracketContainer) return;
+    // Generate tournament rounds
+    generateRounds: function() {
+        this.state.rounds = [];
         
-        // Clear existing content
-        bracketContainer.innerHTML = '';
+        // Create first round matches
+        const firstRound = {
+            name: 'Round 1',
+            matches: []
+        };
         
-        // Create container for rounds
-        const roundsContainer = document.createElement('div');
-        roundsContainer.className = 'rounds';
+        // Create matches based on player count
+        for (let i = 0; i < this.state.players.length; i += 2) {
+            if (i + 1 < this.state.players.length) {
+                firstRound.matches.push({
+                    id: `match-${this.state.rounds.length}-${firstRound.matches.length}`,
+                    player1: this.state.players[i],
+                    player2: this.state.players[i + 1],
+                    winner: null,
+                    score: null
+                });
+            } else {
+                // Handle odd number of players with a "bye"
+                firstRound.matches.push({
+                    id: `match-${this.state.rounds.length}-${firstRound.matches.length}`,
+                    player1: this.state.players[i],
+                    player2: 'BYE',
+                    winner: this.state.players[i],
+                    score: 'BYE'
+                });
+            }
+        }
         
-        // Get user data for highlighting
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const loggedInUserName = userData.name || document.getElementById('userName').textContent;
+        this.state.rounds.push(firstRound);
+    },
+    
+    // Show the bracket in the UI
+    showBracket: function() {
+        const bracket = document.getElementById('tournament-bracket');
+        if (!bracket) return;
         
-        // Create each round
+        bracket.innerHTML = '';
+        
+        // Create rounds
         this.state.rounds.forEach((round, roundIndex) => {
-            const roundEl = document.createElement('div');
-            roundEl.className = 'round';
+            const roundDiv = document.createElement('div');
+            roundDiv.className = 'round';
+            roundDiv.innerHTML = `<h3 class="round-title">${round.name}</h3>`;
             
-            // Add round label
-            const roundLabel = document.createElement('div');
-            roundLabel.className = 'round-label';
-            roundLabel.textContent = roundIndex === this.state.rounds.length - 1 ? 'Final' : 
-                                    roundIndex === this.state.rounds.length - 2 ? 'Semi-Finals' : 
-                                    `Round ${roundIndex + 1}`;
-            roundEl.appendChild(roundLabel);
-            
-            // Create each match in this round
-            round.forEach(match => {
-                const matchEl = document.createElement('div');
-                matchEl.className = 'match';
-                matchEl.dataset.id = match.id;
+            // Create matches in this round
+            round.matches.forEach(match => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'match-pair';
+                matchDiv.dataset.id = match.id;
                 
-                // Player 1 section
-                const player1El = document.createElement('div');
-                player1El.className = 'player-slot';
-                if (match.player1) {
-                    player1El.classList.add('filled');
-                    if (match.winner === match.player1) {
-                        player1El.classList.add('winner');
-                    }
-                    if (match.player1 === loggedInUserName) {
-                        player1El.classList.add('current-user');
-                    }
-                }
-                player1El.textContent = match.player1 || 'TBD';
-                matchEl.appendChild(player1El);
+                // Create match header
+                const matchHeader = document.createElement('div');
+                matchHeader.className = 'match-header';
+                matchHeader.textContent = `Match`;
                 
-                // VS separator
-                const vsEl = document.createElement('div');
-                vsEl.className = 'vs';
-                vsEl.innerHTML = match.score ? `<span>${match.score}</span>` : 'vs';
-                matchEl.appendChild(vsEl);
+                // Create player1 element
+                const player1Div = document.createElement('div');
+                player1Div.className = `player ${match.winner === match.player1 ? 'winner' : ''}`;
                 
-                // Player 2 section
-                const player2El = document.createElement('div');
-                player2El.className = 'player-slot';
-                if (match.player2) {
-                    player2El.classList.add('filled');
-                    if (match.winner === match.player2) {
-                        player2El.classList.add('winner');
-                    }
-                    if (match.player2 === loggedInUserName) {
-                        player2El.classList.add('current-user');
-                    }
-                }
-                player2El.textContent = match.player2 || 'TBD';
-                matchEl.appendChild(player2El);
+                const player1Name = document.createElement('span');
+                player1Name.className = 'player-name';
+                player1Name.textContent = match.player1;
                 
-                // Highlight current match
-                if (match.id === this.state.currentMatchId) {
-                    matchEl.classList.add('current');
-                }
+                const player1Score = document.createElement('span');
+                player1Score.className = 'score';
+                player1Score.textContent = match.score ? match.score.split('-')[0] : '0';
                 
-                // Add match to round
-                roundEl.appendChild(matchEl);
+                player1Div.appendChild(player1Name);
+                player1Div.appendChild(player1Score);
+                
+                // Create player2 element
+                const player2Div = document.createElement('div');
+                player2Div.className = `player ${match.winner === match.player2 ? 'winner' : ''}`;
+                
+                const player2Name = document.createElement('span');
+                player2Name.className = 'player-name';
+                player2Name.textContent = match.player2;
+                
+                const player2Score = document.createElement('span');
+                player2Score.className = 'score';
+                player2Score.textContent = match.score ? match.score.split('-')[1] : '0';
+                
+                player2Div.appendChild(player2Name);
+                player2Div.appendChild(player2Score);
+                
+                // Create match status
+                const matchStatus = document.createElement('div');
+                matchStatus.className = 'match-status';
+                matchStatus.textContent = match.winner ? 'Completed' : 'Pending';
+                
+                // Assemble match
+                matchDiv.appendChild(matchHeader);
+                matchDiv.appendChild(player1Div);
+                matchDiv.appendChild(player2Div);
+                matchDiv.appendChild(matchStatus);
+                
+                // Add to round
+                roundDiv.appendChild(matchDiv);
             });
             
-            // Add round to container
-            roundsContainer.appendChild(roundEl);
+            // Add round to bracket
+            bracket.appendChild(roundDiv);
         });
         
-        // Add rounds to bracket
-        bracketContainer.appendChild(roundsContainer);
+        // Show tournament container
+        document.querySelector('.tournament-container').classList.add('show');
         
-        // Check if tournament is complete
-        this.checkTournamentComplete();
+        // If tournament is complete, show winner
+        if (this.state.isComplete) {
+            this.showWinner();
+        }
     },
     
-    // Start the next pending match
+    // Find and start the next pending match
     startNextMatch: function() {
-        const nextMatch = this.findNextPendingMatch();
-        if (!nextMatch) return;
+        // Find the first pending match
+        let pendingMatch = null;
         
-        // Store current match ID
-        this.state.currentMatchId = nextMatch.id;
-        this.saveState();
+        for (const round of this.state.rounds) {
+            for (const match of round.matches) {
+                if (!match.winner && match.player2 !== 'BYE') {
+                    pendingMatch = match;
+                    break;
+                }
+            }
+            if (pendingMatch) break;
+        }
         
-        // Set up match data for the game
-        localStorage.setItem('currentMatch', JSON.stringify({
-            id: nextMatch.id,
-            player1: nextMatch.player1,
-            player2: nextMatch.player2,
-            isTournament: true,
-            winningScore: 3
-        }));
-        
-        // Navigate to game view
-        window.location.href = '#game';
-        if (typeof window.showView === 'function') {
-            window.showView('game');
+        if (pendingMatch) {
+            // Store the match ID to identify it when we return
+            this.state.currentMatchId = pendingMatch.id;
+            this.saveState();
+            
+            // Save current match data for the game
+            localStorage.setItem('currentMatch', JSON.stringify({
+                id: pendingMatch.id,
+                player1: pendingMatch.player1,
+                player2: pendingMatch.player2,
+                isTournament: true
+            }));
+            
+            // Navigate to game view
+            if (typeof window.showView === 'function') {
+                window.showView('game');
+            } else {
+                window.location.href = '/game';
+            }
+        } else if (!this.state.isComplete && this.getWinner()) {
+            // All matches complete, show winner
+            this.state.isComplete = true;
+            this.saveState();
+            this.showWinner();
+        } else {
+            // No pending matches, and no winner - something went wrong
+            console.error("No pending matches found");
         }
     },
     
-    // Find the next pending match
-    findNextPendingMatch: function() {
-        // Get logged in user
-        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-        const loggedInUserName = userData.name || document.getElementById('userName').textContent;
-        
-        // First priority: user's matches
-        for (const round of this.state.rounds) {
-            for (const match of round) {
-                if (!match.isComplete && match.player1 && match.player2) {
-                    if (match.player1 === loggedInUserName || match.player2 === loggedInUserName) {
-                        return match;
-                    }
-                }
-            }
-        }
-        
-        // Second priority: any pending match
-        for (const round of this.state.rounds) {
-            for (const match of round) {
-                if (!match.isComplete && match.player1 && match.player2) {
-                    return match;
-                }
-            }
-        }
-        
-        return null;
-    },
-    
-    // Check for match results
+    // Check for match results and update
     checkMatchResults: function() {
-        const resultStr = localStorage.getItem('matchResult');
-        if (!resultStr) return;
-        
-        try {
-            const result = JSON.parse(resultStr);
-            const matchId = this.state.currentMatchId;
-            
-            if (!matchId) {
-                localStorage.removeItem('matchResult');
-                return;
-            }
-            
-            // Find the match and update it
-            const match = this.findMatchById(matchId);
-            if (match) {
-                match.winner = result.winner;
-                match.score = result.score;
-                match.isComplete = true;
+        const matchResult = localStorage.getItem('matchResult');
+        if (matchResult) {
+            try {
+                const result = JSON.parse(matchResult);
                 
-                // Advance winners to next rounds
-                this.advanceWinners();
+                // Find the match
+                let match = null;
+                let round = null;
                 
-                // Save state
-                this.saveState();
-                
-                // Render bracket
-                this.renderBracket();
-                
-                // Reset current match id
-                this.state.currentMatchId = null;
-                
-                // Clean up
-                localStorage.removeItem('matchResult');
-            }
-            
-        } catch (e) {
-            console.error('Error processing match result:', e);
-            localStorage.removeItem('matchResult');
-        }
-    },
-    
-    // Find match by ID
-    findMatchById: function(id) {
-        for (const round of this.state.rounds) {
-            for (const match of round) {
-                if (match.id === id) {
-                    return match;
-                }
-            }
-        }
-        return null;
-    },
-    
-    // Advance winners to next rounds
-    advanceWinners: function() {
-        for (let roundIndex = 0; roundIndex < this.state.rounds.length - 1; roundIndex++) {
-            const round = this.state.rounds[roundIndex];
-            const nextRound = this.state.rounds[roundIndex + 1];
-            
-            round.forEach((match, matchIndex) => {
-                if (match.winner) {
-                    const nextMatchIndex = Math.floor(matchIndex / 2);
-                    if (nextRound[nextMatchIndex]) {
-                        if (matchIndex % 2 === 0) {
-                            nextRound[nextMatchIndex].player1 = match.winner;
-                        } else {
-                            nextRound[nextMatchIndex].player2 = match.winner;
+                for (const r of this.state.rounds) {
+                    for (const m of r.matches) {
+                        if (m.id === result.matchId || m.id === this.state.currentMatchId) {
+                            match = m;
+                            round = r;
+                            break;
                         }
                     }
+                    if (match) break;
                 }
-            });
+                
+                if (match) {
+                    // Update match with result
+                    match.winner = result.winner;
+                    match.score = result.score;
+                    
+                    // Create next round if needed
+                    this.advanceTournament(round);
+                    
+                    // Update UI
+                    this.showBracket();
+                    
+                    // Save state
+                    this.saveState();
+                }
+                
+                // Clear result
+                localStorage.removeItem('matchResult');
+                
+            } catch (e) {
+                console.error("Error processing match result:", e);
+            }
         }
     },
     
-    // Check if tournament is complete
-    checkTournamentComplete: function() {
-        if (this.state.rounds.length === 0) return false;
+    // Advance tournament - create next round if current is complete
+    advanceTournament: function(currentRound) {
+        // Check if all matches in the current round are complete
+        const isRoundComplete = currentRound.matches.every(match => !!match.winner);
         
-        const finalRound = this.state.rounds[this.state.rounds.length - 1];
-        if (finalRound.length === 0) return false;
+        if (!isRoundComplete) return;
         
-        const finalMatch = finalRound[0];
-        if (finalMatch.winner) {
+        // Find the current round index
+        const roundIndex = this.state.rounds.findIndex(r => r === currentRound);
+        
+        // Get winners from current round
+        const winners = currentRound.matches.map(match => match.winner);
+        
+        // If only one winner, tournament is complete
+        if (winners.length === 1) {
             this.state.isComplete = true;
-            this.announceWinner(finalMatch.winner);
-            return true;
+            return;
         }
         
-        return false;
+        // Create next round
+        const nextRound = {
+            name: `Round ${roundIndex + 2}`,
+            matches: []
+        };
+        
+        // Create matches for next round
+        for (let i = 0; i < winners.length; i += 2) {
+            if (i + 1 < winners.length) {
+                nextRound.matches.push({
+                    id: `match-${roundIndex + 1}-${nextRound.matches.length}`,
+                    player1: winners[i],
+                    player2: winners[i + 1],
+                    winner: null,
+                    score: null
+                });
+            } else {
+                // Handle odd number of players with a "bye"
+                nextRound.matches.push({
+                    id: `match-${roundIndex + 1}-${nextRound.matches.length}`,
+                    player1: winners[i],
+                    player2: 'BYE',
+                    winner: winners[i],
+                    score: 'BYE'
+                });
+            }
+        }
+        
+        // Add next round
+        this.state.rounds.push(nextRound);
+        
+        // Check if we need to advance again (in case of BYEs)
+        if (nextRound.matches.length === 1 && nextRound.matches[0].player2 === 'BYE') {
+            this.advanceTournament(nextRound);
+        }
     },
     
-    // Announce winner
-    announceWinner: function(winner) {
-        // Remove any existing announcement
-        const existingAnnouncement = document.querySelector('.winner-announcement');
-        if (existingAnnouncement) {
-            existingAnnouncement.remove();
+    // Get the tournament winner
+    getWinner: function() {
+        // The winner is the winner of the last match in the last round
+        if (this.state.rounds.length > 0) {
+            const lastRound = this.state.rounds[this.state.rounds.length - 1];
+            if (lastRound.matches.length > 0) {
+                const lastMatch = lastRound.matches[lastRound.matches.length - 1];
+                return lastMatch.winner;
+            }
+        }
+        return null;
+    },
+    
+    // Show the winner announcement
+    showWinner: function() {
+        const winner = this.getWinner();
+        if (!winner) return;
+        
+        // Create or update winner announcement
+        let announcement = document.querySelector('.winner-announcement');
+        if (!announcement) {
+            announcement = document.createElement('div');
+            announcement.className = 'winner-announcement';
+            document.querySelector('.tournament-container').appendChild(announcement);
         }
         
-        // Create announcement
-        const tournamentContainer = document.querySelector('.tournament-container');
-        const announcement = document.createElement('div');
-        announcement.className = 'winner-announcement';
+        // Update content
         announcement.innerHTML = `
-            <div class="winner-trophy"><i class="fas fa-trophy"></i></div>
+            <div class="trophy-icon"><i class="fas fa-trophy"></i></div>
             <h2>Tournament Champion</h2>
             <div class="winner-name">${winner}</div>
-            <p>Congratulations!</p>
-            <button class="new-tournament-btn">Start New Tournament</button>
+            <button class="new-tournament-btn">
+                <i class="fas fa-sitemap"></i>
+                Start New Tournament
+            </button>
         `;
         
-        tournamentContainer.appendChild(announcement);
+        // Add event listener to new tournament button
+        const newTournamentBtn = announcement.querySelector('.new-tournament-btn');
+        if (newTournamentBtn) {
+            newTournamentBtn.addEventListener('click', () => this.resetTournament());
+        }
         
-        // Add event listener to button
-        document.querySelector('.new-tournament-btn').addEventListener('click', () => this.resetTournament());
-    },
-    
-    // Update visibility of start button
-    updateStartButton: function() {
+        // Hide start button
         const startButton = document.querySelector('.start-button');
-        if (!startButton) return;
-        
-        const nextMatch = this.findNextPendingMatch();
-        if (nextMatch && !this.state.isComplete) {
-            startButton.style.display = 'flex';
-            startButton.innerHTML = `
-                <i class="fas fa-play"></i>
-                ${nextMatch.player1} vs ${nextMatch.player2}
-                <i class="fas fa-chevron-right"></i>
-            `;
-        } else {
+        if (startButton) {
             startButton.style.display = 'none';
         }
     },
@@ -565,8 +521,17 @@ const Tournament = {
             // We have tournament data, show the bracket
             this.showBracket();
             
+            // Hide setup section
+            document.querySelector('.setup-section').classList.add('hide');
+            
             // Update progress step
             this.setActiveStep(this.state.isComplete ? 3 : 2);
+            
+            // Show/hide start button based on state
+            const startButton = document.querySelector('.start-button');
+            if (startButton) {
+                startButton.style.display = this.state.isComplete ? 'none' : 'block';
+            }
         }
     },
     
@@ -583,18 +548,23 @@ const Tournament = {
     
     // Shuffle array (Fisher-Yates algorithm)
     shuffleArray: function(array) {
-        for (let i = array.length - 1; i > 0; i--) {
+        const arrayCopy = [...array];
+        for (let i = arrayCopy.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+            [arrayCopy[i], arrayCopy[j]] = [arrayCopy[j], arrayCopy[i]];
         }
-        return array;
+        return arrayCopy;
     }
 };
 
-// Initialize tournament when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-    Tournament.init();
-});
-
 // Make Tournament globally accessible
-window.Tournament = Tournament; 
+window.Tournament = Tournament;
+
+// Expose functions needed by mainpage.js
+window.setupTournamentDirectly = function() {
+    Tournament.init();
+};
+
+window.resetTournament = function() {
+    Tournament.resetTournament();
+}; 
