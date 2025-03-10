@@ -9,42 +9,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="mainpage.css">
-    <style>
-        .back-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(45deg, #c70082a1 0%, #032a6ceb 100%);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 30px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        
-        .back-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .view {
-            position: relative;
-        }
-    </style>
+    <script src="/locales/i18n.js"></script>
+
 </head>
 <body>
     <header>
         <div class="user-profile">
             <img id="userAvatar" class="avatar" src="https://via.placeholder.com/40" alt="User Avatar">
             <span id="userName" class="player-name">Player</span>
+        </div>
+        <div class="language-switcher">
+            <button data-language="en" class="lang-btn">EN</button>
+            <button data-language="es" class="lang-btn">ES</button>
+            <button data-language="fr" class="lang-btn">FR</button>
         </div>
         <div class="settings">
             <i class="fas fa-cog"></i>
@@ -57,12 +34,12 @@
             <div class="logo">PONG</div>
             <div class="game-modes">
                 <div class="mode-card spa-link" data-path="/game">
-                    <h2>Play</h2>
-                    <span class="mode-title">1 vs 1</span>
+                    <h2 data-i18n="game.play">Play</h2>
+                    <span class="mode-title" data-i18n="game.oneVsOne">1 vs 1</span>
                 </div>
                 <div class="mode-card spa-link" data-path="/tournament">
-                    <h2>Play</h2>
-                    <span class="mode-title">Tournament</span>
+                    <h2 data-i18n="game.play">Play</h2>
+                    <span class="mode-title" data-i18n="tournament.tournament">Tournament</span>
                 </div>
             </div>
         </main>
@@ -74,7 +51,7 @@
             <i class="fas fa-arrow-left"></i> Back to Home
         </button>
         <main>
-            <h1 class="section-title">1 vs 1 Game</h1>
+            <h1 class="section-title" data-i18n="game.oneVsOne">1 vs 1 Game</h1>
             <div class="game-container">
                 <div class="game-header">
                     <div class="player-card p1" id="player1Name">
@@ -115,7 +92,7 @@
             <i class="fas fa-arrow-left"></i> Back to Home
         </button>
         <main>
-            <h1 class="section-title">Tournament Mode</h1>
+            <h1 class="section-title" data-i18n="tournament.tournament">Tournament Mode</h1>
             
             <!-- Tournament Setup Section -->
             <div class="setup-section">
@@ -296,7 +273,14 @@
     </div>
 
     <script src="mainpage.js"></script>
+
     <script>
+             window.addEventListener('beforeunload', (event) => {
+        // Perform your tracking or cleanup tasks here
+            localStorage.setItem("currentView", "home");
+            event.preventDefault();
+            event.returnValue = '';
+        });
         // Direct tournament interactivity test
         document.addEventListener('DOMContentLoaded', function() {
             // Check for tournament buttons after a delay

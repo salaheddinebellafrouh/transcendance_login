@@ -66,6 +66,26 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('changePasswordButton').addEventListener('click', function() {
         changePassword();
     });
+
+    // Initialize language switcher
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lang = this.getAttribute('data-language');
+            localStorage.setItem('language', lang);
+            
+            // Update active button
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Load and apply translations
+            if (window.I18n) {
+                window.I18n.setLanguage(lang);
+            }
+        });
+    });
+    
+    // Set active language button
+    updateLanguageButtons();
 });
 
 // Simple SPA navigation
@@ -150,6 +170,9 @@ function updateUserProfile(userData) {
     if (userAvatar && userData.image_url) {
         userAvatar.src = userData.image_url;
     }
+
+    // Update language buttons when profile is updated
+    updateLanguageButtons();
 }
 
 function fetchUserInfo() {
@@ -808,5 +831,16 @@ function checkOAuthUser() {
     })
     .catch(error => {
         console.error('Error checking OAuth status:', error);
+    });
+}
+
+// Add this function to update the active language button
+function updateLanguageButtons() {
+    const currentLang = localStorage.getItem('language') || 'en';
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-language') === currentLang) {
+            btn.classList.add('active');
+        }
     });
 } 
