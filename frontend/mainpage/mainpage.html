@@ -206,6 +206,95 @@
         </main>
     </div>
 
+    <!-- Update the Profile View to include edit functionality -->
+    <div id="profileView" class="view" style="display:none;">
+        <button class="back-button spa-link" data-path="/home">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </button>
+        <main>
+            <h1 class="section-title">User Profile</h1>
+            <div class="profile-container">
+                <div class="profile-header">
+                    <div class="profile-avatar-container">
+                        <img id="profileAvatar" class="profile-avatar" src="https://via.placeholder.com/150" alt="User Avatar">
+                        <div class="avatar-edit-overlay">
+                            <label for="avatarUpload" class="avatar-edit-btn">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                            <input type="file" id="avatarUpload" accept="image/*" style="display:none">
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-field">
+                            <h2 id="profileName">Username</h2>
+                            <div class="edit-field" style="display:none">
+                                <input type="text" id="nameInput" class="profile-input">
+                                <button class="save-field-btn" data-field="name"><i class="fas fa-check"></i></button>
+                                <button class="cancel-field-btn"><i class="fas fa-times"></i></button>
+                            </div>
+                            <button class="edit-btn" data-field="name"><i class="fas fa-edit"></i></button>
+                        </div>
+                        <div class="profile-field">
+                            <p id="profileEmail">user@example.com</p>
+                            <div class="edit-field" style="display:none">
+                                <input type="email" id="emailInput" class="profile-input">
+                                <button class="save-field-btn" data-field="email"><i class="fas fa-check"></i></button>
+                                <button class="cancel-field-btn"><i class="fas fa-times"></i></button>
+                            </div>
+                            <button class="edit-btn" data-field="email"><i class="fas fa-edit"></i></button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-actions">
+                    <button id="logoutButton" class="profile-button logout-button">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                    <button id="saveProfileButton" class="profile-button save-button">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+                
+                <!-- Status message for updates -->
+                <div id="profileUpdateStatus" class="update-status"></div>
+
+                <!-- Update the password section -->
+                <div class="profile-section password-section">
+                    <h3 class="section-title-small">Change Password</h3>
+                    <p id="passwordInstructions" class="password-instructions" style="display:none;"></p>
+                    
+                    <div class="profile-field">
+                        <div class="password-fields">
+                            <div id="currentPasswordContainer" class="form-group">
+                                <label for="currentPassword">Current Password</label>
+                                <input type="password" id="currentPassword" class="profile-input" placeholder="Current password">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="newPassword">New Password</label>
+                                <input type="password" id="newPassword" class="profile-input" placeholder="New password">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm Password</label>
+                                <input type="password" id="confirmPassword" class="profile-input" placeholder="Confirm new password">
+                            </div>
+                            
+                            <div class="password-actions">
+                                <button id="changePasswordButton" class="profile-button save-button">
+                                    <i class="fas fa-key"></i> Change Password
+                                </button>
+                            </div>
+                            
+                            <!-- Password update status message -->
+                            <div id="passwordUpdateStatus" class="update-status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
     <script src="mainpage.js"></script>
     <script>
         // Direct tournament interactivity test

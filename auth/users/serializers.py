@@ -8,6 +8,16 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True}
         }
+    
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        # Add an absolute URL for the image if needed
+        if 'image_url' in rep and rep['image_url'] and not rep['image_url'].startswith(('http://', 'https://')):
+            request = self.context.get('request')
+            if request:
+                rep['image_url'] = request.build_absolute_uri(rep['image_url'])
+        return rep
+        
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)

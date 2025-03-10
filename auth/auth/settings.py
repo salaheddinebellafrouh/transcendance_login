@@ -133,22 +133,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.USER'
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5500",
-    "http://127.0.0.1:5500"
-]
-
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_METHODS = [
+    'DELETE',
     'GET',
+    'OPTIONS',
+    'PATCH',
     'POST',
     'PUT',
-    'PATCH',
-    'DELETE',
-    'OPTIONS'
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -176,3 +171,7 @@ OAUTH42_CLIENT_SECRET = os.getenv('OAUTH42_CLIENT_SECRET')
 OAUTH42_REDIRECT_URI = "http://localhost:3000/callback.html"
 OAUTH42_AUTHORIZATION_URL = os.getenv('OAUTH42_AUTHORIZATION_URL', 'https://api.intra.42.fr/oauth/authorize')
 OAUTH42_TOKEN_URL = os.getenv('OAUTH42_TOKEN_URL', 'https://api.intra.42.fr/oauth/token')
+
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

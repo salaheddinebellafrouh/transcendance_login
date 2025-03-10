@@ -51,6 +51,21 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('No saved view, defaulting to home');
         showView('home');
     }
+
+    // Set up settings icon to open profile
+    document.querySelector('.settings').addEventListener('click', function() {
+        showView('profile');
+    });
+
+    // Set up logout button
+    document.getElementById('logoutButton').addEventListener('click', function() {
+        logout();
+    });
+
+    // Set up password change functionality
+    document.getElementById('changePasswordButton').addEventListener('click', function() {
+        changePassword();
+    });
 });
 
 // Simple SPA navigation
@@ -101,6 +116,9 @@ function showView(viewName) {
         // Already being handled by the specific start functions
     } else if (viewName === 'tournament') {
         loadTournamentResources();
+    } else if (viewName === 'profile') {
+        // Update profile info
+        updateProfileInfo();
     }
     
     // Update active state in navigation
@@ -138,9 +156,9 @@ function fetchUserInfo() {
     console.log("Fetching user info from backend");
     
     const jwt = localStorage.getItem('jwt');
-    if (!jwt) return;
+    if (!jwt) return Promise.resolve(null);
     
-    fetch('http://localhost:8000/api/user', {
+    return fetch('http://localhost:8000/api/user', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${jwt}`
@@ -169,9 +187,12 @@ function fetchUserInfo() {
         if (userAvatar && data.image_url) {
             userAvatar.src = data.image_url;
         }
+        
+        return data;
     })
     .catch(error => {
         console.error("Error fetching user data:", error);
+        return null;
     });
 }
 
@@ -467,4 +488,325 @@ function startTournamentGame() {
 window.startTournamentGame = startTournamentGame;
 
 // Export the fetchUserInfo function for tournament use
-window.fetchUserInfo = fetchUserInfo; 
+window.fetchUserInfo = fetchUserInfo;
+
+// Update profile info handling
+function updateProfileInfo() {
+    // Get user data from localStorage
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    
+    // If no data, try to fetch it
+    if (!userData.name || !userData.email) {
+        fetchUserInfo().then(data => {
+            if (data) {
+                updateProfileDisplay(data);
+                setupProfileEditors(data);
+                checkOAuthUser();
+            }
+        });
+    } else {
+        updateProfileDisplay(userData);
+        setupProfileEditors(userData);
+        checkOAuthUser();
+    }
+}
+
+// Function to set up profile edit functionality
+function setupProfileEditors(userData) {
+    // Set up edit buttons
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        const field = btn.getAttribute('data-field');
+        
+        btn.addEventListener('click', () => {
+            // Hide the display, show the edit field
+            const parent = btn.closest('.profile-field');
+            
+            // Get current value
+            const currentValue = field === 'name' ? userData.name : userData.email;
+            
+            // Set input value
+            const input = document.getElementById(`${field}Input`);
+            if (input) input.value = currentValue;
+            
+            // Toggle display/edit mode
+            parent.querySelector('h2, p').style.display = 'none';
+            parent.querySelector('.edit-field').style.display = 'flex';
+        });
+    });
+    
+    // Set up cancel buttons
+    document.querySelectorAll('.cancel-field-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const parent = btn.closest('.profile-field');
+            parent.querySelector('h2, p').style.display = 'block';
+            parent.querySelector('.edit-field').style.display = 'none';
+        });
+    });
+    
+    // Set up save field buttons
+    document.querySelectorAll('.save-field-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const field = btn.getAttribute('data-field');
+            const input = document.getElementById(`${field}Input`);
+            const value = input.value.trim();
+            
+            if (!value) return;
+            
+            // Update local display
+            const displayEl = field === 'name' ? document.getElementById('profileName') : document.getElementById('profileEmail');
+            displayEl.textContent = value;
+            
+            // Update local data
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            userData[field] = value;
+            localStorage.setItem('userData', JSON.stringify(userData));
+            
+            // Update UI
+            updateUserProfile(userData);
+            
+            // Switch back to display mode
+            const parent = btn.closest('.profile-field');
+            parent.querySelector('h2, p').style.display = 'block';
+            parent.querySelector('.edit-field').style.display = 'none';
+        });
+    });
+    
+    // Set up avatar upload
+    const avatarUpload = document.getElementById('avatarUpload');
+    avatarUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Preview image
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('profileAvatar').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+    
+    // Set up save button
+    document.getElementById('saveProfileButton').addEventListener('click', () => {
+        saveProfile();
+    });
+}
+
+// Function to save all profile changes
+function saveProfile() {
+    const statusEl = document.getElementById('profileUpdateStatus');
+    statusEl.className = 'update-status';
+    statusEl.textContent = 'Saving changes...';
+    statusEl.style.display = 'block';
+    
+    // Get updated user data
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    
+    // Check if we have a file to upload
+    const avatarInput = document.getElementById('avatarUpload');
+    const avatarFile = avatarInput.files[0];
+    
+    // Create form data for the update
+    const formData = new FormData();
+    formData.append('name', userData.name || '');
+    formData.append('email', userData.email || '');
+    
+    if (avatarFile) {
+        formData.append('avatar', avatarFile);
+    }
+    
+    // Send update to server
+    fetch('http://localhost:8000/api/user/update', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to update profile');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Profile updated:', data);
+        
+        // Update localStorage with new data
+        localStorage.setItem('userData', JSON.stringify(data));
+        
+        // Update all UI elements
+        updateUserProfile(data);
+        updateProfileDisplay(data);
+        
+        // Show success message
+        statusEl.className = 'update-status success';
+        statusEl.textContent = 'Profile updated successfully!';
+        
+        // Clear file input
+        avatarInput.value = '';
+        
+        // Hide message after a delay
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 3000);
+    })
+    .catch(error => {
+        console.error('Error updating profile:', error);
+        
+        // Show error message
+        statusEl.className = 'update-status error';
+        statusEl.textContent = 'Failed to update profile. Please try again.';
+        
+        // Hide message after a delay
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 3000);
+    });
+}
+
+// Function to update profile display elements
+function updateProfileDisplay(userData) {
+    const profileName = document.getElementById('profileName');
+    const profileEmail = document.getElementById('profileEmail');
+    const profileAvatar = document.getElementById('profileAvatar');
+    
+    if (profileName && userData.name) {
+        profileName.textContent = userData.name;
+    }
+    
+    if (profileEmail && userData.email) {
+        profileEmail.textContent = userData.email;
+    }
+    
+    if (profileAvatar && userData.image_url) {
+        profileAvatar.src = userData.image_url;
+    }
+}
+
+// Update the changePassword function to better handle OAuth users
+function changePassword() {
+    const statusEl = document.getElementById('passwordUpdateStatus');
+    statusEl.className = 'update-status';
+    statusEl.textContent = 'Updating password...';
+    statusEl.style.display = 'block';
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Check if this is an OAuth user by seeing if the current password container is hidden
+    const currentPasswordContainer = document.getElementById('currentPasswordContainer');
+    const isCurrentPasswordVisible = currentPasswordContainer && 
+        window.getComputedStyle(currentPasswordContainer).display !== 'none';
+    
+    console.log('Is current password field visible:', isCurrentPasswordVisible);
+    
+    // Basic validation for new password
+    if (!newPassword) {
+        statusEl.className = 'update-status error';
+        statusEl.textContent = 'Please enter a new password';
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        statusEl.className = 'update-status error';
+        statusEl.textContent = 'New passwords do not match';
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        statusEl.className = 'update-status error';
+        statusEl.textContent = 'Password must be at least 6 characters';
+        return;
+    }
+    
+    // Only validate current password if it's required (not OAuth)
+    if (isCurrentPasswordVisible && !currentPassword) {
+        statusEl.className = 'update-status error';
+        statusEl.textContent = 'Please enter your current password';
+        return;
+    }
+    
+    // Send password change request
+    fetch('http://localhost:8000/api/user/change-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+        },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Failed to change password');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Password updated:', data);
+        
+        // Show success message
+        statusEl.className = 'update-status success';
+        statusEl.textContent = 'Password updated successfully!';
+        
+        // Clear password fields
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        
+        // Hide message after a delay
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 3000);
+    })
+    .catch(error => {
+        console.error('Error updating password:', error);
+        
+        // Show error message
+        statusEl.className = 'update-status error';
+        statusEl.textContent = error.message || 'Failed to update password. Please try again.';
+    });
+}
+
+// Check if user is an OAuth user and adjust password form accordingly
+function checkOAuthUser() {
+    fetch('http://localhost:8000/api/user/is-oauth', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const currentPasswordField = document.getElementById('currentPasswordContainer');
+        const passwordTitle = document.querySelector('.password-section h3');
+        const passwordInstructions = document.getElementById('passwordInstructions');
+        
+        if (data.is_oauth) {
+            // OAuth user - hide current password field
+            if (currentPasswordField) currentPasswordField.style.display = 'none';
+            
+            // Update title and add instructions
+            if (passwordTitle) passwordTitle.textContent = 'Set Password';
+            if (passwordInstructions) {
+                passwordInstructions.textContent = 'As a 42 user, you can set a password to login directly in the future.';
+                passwordInstructions.style.display = 'block';
+            }
+        } else {
+            // Regular user - show current password field
+            if (currentPasswordField) currentPasswordField.style.display = 'block';
+            
+            // Update title
+            if (passwordTitle) passwordTitle.textContent = 'Change Password';
+            if (passwordInstructions) passwordInstructions.style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Error checking OAuth status:', error);
+    });
+} 

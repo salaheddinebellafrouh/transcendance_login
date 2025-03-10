@@ -27,9 +27,29 @@ window.GameEngine = {
     animationId: null,
     handlers: {},
     
+    // Add this new helper function to clean up old players
+    clearGameElements: function() {
+        console.log('Clearing all game elements');
+        
+        // Remove all players
+        const playerElements = document.querySelectorAll('.arena .player');
+        playerElements.forEach(element => {
+            element.remove();
+        });
+        
+        // Remove all balls
+        const ballElements = document.querySelectorAll('.arena .ball');
+        ballElements.forEach(element => {
+            element.remove();
+        });
+    },
+    
     // Initialize core game engine
     init: function(options = {}) {
         console.log('Initializing game engine...');
+        
+        // Clear old game elements before creating new ones
+        this.clearGameElements();
         
         // If already initialized, clean up first
         if (this.initialized) {
@@ -137,164 +157,244 @@ window.GameEngine = {
     
     // Other methods (setupGameObjects, startGameLoop, etc.) remain similar...
     setupGameObjects: function() {
-        const self = this;
-        let firstPlayer = 0;
+        // Get arena dimensions
+        const arenaWidth = this.dimensions.arenaWidth;
+        const arenaHeight = this.dimensions.arenaHeight;
+        const paddleWidth = this.dimensions.paddleWidth;
+        const paddleHeight = this.dimensions.paddleHeight;
+        const ballSize = this.dimensions.ballSize;
         
-        class PlayerObj {
-            constructor() {
-                this.Name = "Player";
-                this.MoveUp = false;
-                this.MoveDown = false;
-                this.keyUP = 'w';
-                this.keyDown = 's';
-                this.speed = 14;
-                if(!firstPlayer){
-                    this.element = self.elements.player.cloneNode(true);
-                    self.elements.arena.appendChild(this.element);
-                    firstPlayer = 1;
+        // Initialize game objects object
+        this.gameObjects = {};
+        
+        // Create left player (player 1)
+        const leftPlayer = document.createElement('div');
+        leftPlayer.className = 'player';
+        leftPlayer.style.width = paddleWidth + 'px';
+        leftPlayer.style.height = paddleHeight + 'px';
+        leftPlayer.style.left = '10px';
+        leftPlayer.style.top = (arenaHeight / 2 - paddleHeight / 2) + 'px';
+        leftPlayer.style.background = 'rgba(199, 0, 130, 0.63)'; // Red player
+        this.elements.arena.appendChild(leftPlayer);
+        
+        this.gameObjects.p1 = {
+            element: leftPlayer,
+            x: 10,
+            y: arenaHeight / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            score: 0,
+            MoveUp: false,
+            MoveDown: false,
+            movePlayer: function() {
+                // Move player based on controls
+                if (this.MoveUp && this.y > 0) {
+                    this.y -= 7;
                 }
-                else{
-                    this.element = self.elements.player;
+                if (this.MoveDown && this.y < (arenaHeight - paddleHeight)) {
+                    this.y += 7;
                 }
-                this.Height = this.element.clientHeight;
-                this.Width = this.element.clientWidth;
-                this.x = -this.Width / 2;
-                this.y = self.elements.arena.clientHeight / 2 - this.Height / 2;
-                this.element.style.left = `${this.x}px`;
-                this.setupControls();
-            }
-
-            movePlayer(){
-                if (this.MoveUp)
-                    this.y = Math.max(this.y - this.speed, 0);
-                if (this.MoveDown)
-                    this.y = Math.min(this.y + this.speed, self.elements.arena.clientHeight - this.Height);
-                this.element.style.top =`${this.y}px`;
-            }
-
-            setNewKey(newKeyUp, newKeyDown) {
-                this.keyUP = newKeyUp;
-                this.keyDown = newKeyDown;
-            }
-
-            setNewX(newPostionX) {
-                this.x = newPostionX;
-                this.element.style.left = `${newPostionX}px`;
-            }
-
-            setName(newName) {
-                this.Name = newName;
-            }
-            
-            setupControls() {
-                self.handlers.keydown = (event) => {
-                    if (event.key === this.keyUP) {
-                        this.MoveUp = true;
-                    } else if (event.key === this.keyDown) {
-                        this.MoveDown = true;
-                    }
-                };
-
-                self.handlers.keyup = (event) => {
-                    if (event.key === this.keyUP) {
-                        this.MoveUp = false;
-                    } else if (event.key === this.keyDown) {
-                        this.MoveDown = false;
-                    }
-                };
                 
-                document.addEventListener('keydown', self.handlers.keydown);
-                document.addEventListener('keyup', self.handlers.keyup);
+                // Update DOM element position
+                this.element.style.top = this.y + 'px';
             }
-        }
-
-        class BallObj {
-            constructor() {
-                this.Name = "ball";
-                this.x = self.elements.arena.clientWidth / 2 - self.elements.ball.clientWidth / 2;
-                this.y = self.elements.arena.clientHeight / 2 - self.elements.ball.clientHeight / 2;
-                this.speed = 4;
-                this.r = self.elements.ball.clientWidth;
-                
-                self.elements.ball.style.left = `${this.x}px`;
-                self.elements.ball.style.top = `${this.y}px`;
-            }
-
-            moveBall(p1, p2){
-                this.x = this.x + this.speed * Math.cos(self.gameVars.angle);
-                this.y = this.y - this.speed * Math.sin(self.gameVars.angle);
-
-                self.elements.ball.style.left = `${this.x}px`;
-                self.elements.ball.style.top = `${this.y}px`;
-
-                if (this.y > self.elements.arena.clientHeight - 15 || this.y <= 0) {
-                    self.gameVars.angle = (self.gameVars.angle * -1) % (Math.PI * 2);
-                }
-                else if(this.x > self.elements.arena.clientWidth - p2.Width / 2 - 1 - this.r && 
-                        Math.abs(this.y - (p2.y + p2.Height / 2)) <= p2.Height / 2) {
-                    this.speed *= 1.05;
-                    self.gameVars.angle = (this.y - (p2.y + p2.Height / 2)) / (p2.Height / 2) * self.gameVars.MAX_ANGLE - Math.PI;
-                }
-                else if(this.x < p1.Width / 2 + 1 && Math.abs(this.y - (p1.y + p1.Height / 2)) <= p1.Height / 2) {
-                    this.speed *= 1.05;
-                    self.gameVars.angle = -(this.y - (p1.y + p1.Height / 2)) / (p1.Height / 2) * self.gameVars.MAX_ANGLE;
-                }
-                else if(this.x < 0) {
-                    this.speed = 4;
-                    self.gameVars.angle = Math.PI / 7;
-                    this.x = self.elements.arena.clientWidth / 2 - self.elements.ball.clientWidth / 2;
-                    this.y = self.elements.arena.clientHeight / 2 - self.elements.ball.clientHeight / 2;
-                    if (self.elements.computerScore) {
-                        self.gameVars.score2++;
-                        self.elements.computerScore.textContent = self.gameVars.score2;
-                    }
-                }
-                else if(this.x >= self.elements.arena.clientWidth - this.r) {
-                    this.speed = 4;
-                    self.gameVars.angle = Math.PI - Math.PI / 7;
-                    this.x = self.elements.arena.clientWidth / 2 - self.elements.ball.clientWidth / 2;
-                    this.y = self.elements.arena.clientHeight / 2 - self.elements.ball.clientHeight / 2;
-                    if (self.elements.playerScore) {
-                        self.gameVars.score1++;
-                        self.elements.playerScore.textContent = self.gameVars.score1;
-                    }
-                }
-
-                // Check for game over
-                if (self.gameVars.score1 >= self.gameVars.WINNING_SCORE || 
-                    self.gameVars.score2 >= self.gameVars.WINNING_SCORE) {
-                    if (!self.finished) {
-                        self.finished = true;
-                        
-                        // Get player names
-                        const p1Name = self.elements.player1Name ? self.elements.player1Name.textContent : 'Player 1';
-                        const p2Name = self.elements.player2Name ? self.elements.player2Name.textContent : 'Player 2';
-                        
-                        // Determine winner
-                        const winner = self.gameVars.score1 > self.gameVars.score2 ? p1Name : p2Name;
-                        
-                        // Call the onGameOver handler if available
-                        if (typeof self.onGameOver === 'function') {
-                            self.onGameOver.call(self, winner, self.gameVars.score1, self.gameVars.score2);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Initialize game objects
-        this.gameObjects = {
-            p1: new PlayerObj(),
-            p2: new PlayerObj(),
-            ball: new BallObj()
         };
-
-        // Setup player 2
-        this.gameObjects.p2.setNewKey('ArrowUp', 'ArrowDown');
-        this.gameObjects.p2.setName('computer');
-        this.gameObjects.p2.setNewX(this.elements.arena.clientWidth - this.gameObjects.p2.Width / 2);
-        this.gameObjects.p2.element.style.background = '#032a6ceb';
-        this.gameObjects.p1.element.style.background = '#c70082a1';
+        
+        // Create right player (player 2)
+        const rightPlayer = document.createElement('div');
+        rightPlayer.className = 'player';
+        rightPlayer.style.width = paddleWidth + 'px';
+        rightPlayer.style.height = paddleHeight + 'px';
+        rightPlayer.style.left = (arenaWidth - paddleWidth - 10) + 'px';
+        rightPlayer.style.top = (arenaHeight / 2 - paddleHeight / 2) + 'px';
+        rightPlayer.style.background = 'rgba(3, 42, 108, 0.92)'; // Blue player
+        this.elements.arena.appendChild(rightPlayer);
+        
+        this.gameObjects.p2 = {
+            element: rightPlayer,
+            x: arenaWidth - paddleWidth - 10,
+            y: arenaHeight / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            score: 0,
+            MoveUp: false,
+            MoveDown: false,
+            movePlayer: function() {
+                // Move player based on controls
+                if (this.MoveUp && this.y > 0) {
+                    this.y -= 7;
+                }
+                if (this.MoveDown && this.y < (arenaHeight - paddleHeight)) {
+                    this.y += 7;
+                }
+                
+                // Update DOM element position
+                this.element.style.top = this.y + 'px';
+            }
+        };
+        
+        // Create the ball
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.style.width = ballSize + 'px';
+        ball.style.height = ballSize + 'px';
+        ball.style.left = (arenaWidth / 2 - ballSize / 2) + 'px';
+        ball.style.top = (arenaHeight / 2 - ballSize / 2) + 'px';
+        this.elements.arena.appendChild(ball);
+        
+        // Define ball object with movement methods
+        this.gameObjects.ball = {
+            element: ball,
+            x: arenaWidth / 2 - ballSize / 2,
+            y: arenaHeight / 2 - ballSize / 2,
+            width: ballSize,
+            height: ballSize,
+            dx: 5,
+            dy: 5 * Math.sin(this.gameVars.angle),
+            
+            // ... Add the rest of the ball movement logic here
+            moveBall: function(p1, p2) {
+                // Update position
+                this.x += this.dx;
+                this.y += this.dy;
+                
+                // Check for collisions
+                this.checkCollisions(p1, p2);
+                
+                // Update DOM element position
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+            },
+            
+            checkCollisions: function(p1, p2) {
+                const arenaWidth = window.GameEngine.dimensions.arenaWidth;
+                const arenaHeight = window.GameEngine.dimensions.arenaHeight;
+                
+                // Wall collision (top and bottom)
+                if (this.y <= 0 || this.y + this.height >= arenaHeight) {
+                    this.dy = -this.dy; // Reverse vertical direction
+                }
+                
+                // Check collision with player 1 (left paddle)
+                if (this.x <= p1.x + p1.width && 
+                    this.x + this.width >= p1.x && 
+                    this.y + this.height >= p1.y && 
+                    this.y <= p1.y + p1.height) {
+                    
+                    // Calculate ball position relative to paddle center (for angle)
+                    const paddleCenter = p1.y + p1.height/2;
+                    const ballCenter = this.y + this.height/2;
+                    const relativeIntersectY = ballCenter - paddleCenter;
+                    
+                    // Normalize to get value between -1 and 1
+                    const normalizedRelativeIntersectionY = relativeIntersectY / (p1.height/2);
+                    
+                    // Calculate bounce angle (max 75 degrees)
+                    const bounceAngle = normalizedRelativeIntersectionY * window.GameEngine.gameVars.MAX_ANGLE;
+                    
+                    // Set new velocity with angle
+                    const ballSpeed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                    this.dx = Math.abs(ballSpeed * Math.cos(bounceAngle)); // Always move right after hitting left paddle
+                    this.dy = ballSpeed * Math.sin(bounceAngle);
+                    
+                    // Move ball outside paddle to prevent getting stuck
+                    this.x = p1.x + p1.width;
+                    
+                    // Increase speed slightly
+                    this.dx *= 1.05;
+                    if (Math.abs(this.dy) > 0) this.dy *= 1.05;
+                }
+                
+                // Check collision with player 2 (right paddle)
+                if (this.x + this.width >= p2.x && 
+                    this.x <= p2.x + p2.width && 
+                    this.y + this.height >= p2.y && 
+                    this.y <= p2.y + p2.height) {
+                    
+                    // Calculate ball position relative to paddle center (for angle)
+                    const paddleCenter = p2.y + p2.height/2;
+                    const ballCenter = this.y + this.height/2;
+                    const relativeIntersectY = ballCenter - paddleCenter;
+                    
+                    // Normalize to get value between -1 and 1
+                    const normalizedRelativeIntersectionY = relativeIntersectY / (p2.height/2);
+                    
+                    // Calculate bounce angle (max 75 degrees)
+                    const bounceAngle = normalizedRelativeIntersectionY * window.GameEngine.gameVars.MAX_ANGLE;
+                    
+                    // Set new velocity with angle
+                    const ballSpeed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                    this.dx = -Math.abs(ballSpeed * Math.cos(bounceAngle)); // Always move left after hitting right paddle
+                    this.dy = ballSpeed * Math.sin(bounceAngle);
+                    
+                    // Move ball outside paddle to prevent getting stuck
+                    this.x = p2.x - this.width;
+                    
+                    // Increase speed slightly
+                    this.dx *= 1.05;
+                    if (Math.abs(this.dy) > 0) this.dy *= 1.05;
+                }
+                
+                // Check if ball goes out of bounds (scoring)
+                if (this.x + this.width < 0) {
+                    // Player 2 scores
+                    p2.score++;
+                    if (window.GameEngine.elements.computerScore) {
+                        window.GameEngine.elements.computerScore.textContent = p2.score;
+                    }
+                    this.resetBall('p2');
+                    
+                    // Check win condition
+                    if (p2.score >= window.GameEngine.gameVars.WINNING_SCORE) {
+                        window.GameEngine.finished = true;
+                        window.GameEngine.onGameOver('Player 2', p1.score, p2.score);
+                    }
+                }
+                
+                if (this.x > arenaWidth) {
+                    // Player 1 scores
+                    p1.score++;
+                    if (window.GameEngine.elements.playerScore) {
+                        window.GameEngine.elements.playerScore.textContent = p1.score;
+                    }
+                    this.resetBall('p1');
+                    
+                    // Check win condition
+                    if (p1.score >= window.GameEngine.gameVars.WINNING_SCORE) {
+                        window.GameEngine.finished = true;
+                        window.GameEngine.onGameOver('Player 1', p1.score, p2.score);
+                    }
+                }
+            },
+            
+            resetBall: function(scorer) {
+                const arenaWidth = window.GameEngine.dimensions.arenaWidth;
+                const arenaHeight = window.GameEngine.dimensions.arenaHeight;
+                
+                // Reset ball to center
+                this.x = arenaWidth / 2 - this.width / 2;
+                this.y = arenaHeight / 2 - this.height / 2;
+                
+                // Reset angle based on who scored
+                window.GameEngine.gameVars.angle = (Math.random() * Math.PI / 4) - Math.PI / 8;
+                
+                // Set initial velocity
+                const initialSpeed = 5;
+                
+                // Direction depends on who scored
+                if (scorer === 'p1') {
+                    this.dx = -initialSpeed * Math.cos(window.GameEngine.gameVars.angle);
+                } else {
+                    this.dx = initialSpeed * Math.cos(window.GameEngine.gameVars.angle);
+                }
+                
+                this.dy = initialSpeed * Math.sin(window.GameEngine.gameVars.angle);
+                
+                // Update the ball position right away to prevent immediate scoring
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+            }
+        };
     },
     
     // Start game loop
@@ -393,6 +493,9 @@ window.GameEngine = {
     cleanup: function() {
         console.log('Cleaning up game engine');
         
+        // Clear any game elements
+        this.clearGameElements();
+        
         // Cancel animation frame
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
@@ -425,6 +528,51 @@ window.GameEngine = {
         // Reset flags and references
         this.initialized = false;
         this.finished = false;
+        this.gameObjects = null;
+        this.handlers = {};
+        
+        // Reset UI elements if they exist
+        if (this.elements) {
+            if (this.elements.finishButton) {
+                this.elements.finishButton.style.display = 'none';
+            }
+            if (this.elements.playerScore) {
+                this.elements.playerScore.textContent = '0';
+            }
+            if (this.elements.computerScore) {
+                this.elements.computerScore.textContent = '0';
+            }
+            
+            // Reset player name elements to prevent duplication
+            if (this.elements.player1Name) {
+                this.elements.player1Name.innerHTML = '<i class="fas fa-user"></i><span>Player 1</span>';
+            }
+            if (this.elements.player2Name) {
+                this.elements.player2Name.innerHTML = '<i class="fas fa-user"></i><span>Player 2</span>';
+            }
+        }
+    },
+    
+    reset: function() {
+        console.log('Resetting game...');
+        
+        // Clear old elements when resetting too
+        this.clearGameElements();
+        
+        // Reset game state
+        this.finished = false;
+        
+        // Reset game state
+        this.gameVars = {
+            score1: 0,
+            score2: 0,
+            WINNING_SCORE: 5,
+            MAX_ANGLE: 5 * Math.PI / 12,
+            angle: -Math.PI / 7
+        };
+        
+        // Reset flags and references
+        this.initialized = false;
         this.gameObjects = null;
         this.handlers = {};
         

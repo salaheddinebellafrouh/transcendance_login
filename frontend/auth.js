@@ -5,6 +5,18 @@ const loginForm = document.querySelector('.form-box.login form');
 const registerForm = document.querySelector('.form-box.register form');
 const API_URL = 'http://localhost:8000';
 
+console.log(`Testing connection to backend at ${API_URL}`);
+fetch(`${API_URL}/api/user/is-oauth`, {
+    method: 'GET',
+    headers: {},
+})
+.then(response => {
+    console.log(`Backend connection test: ${response.status}`);
+})
+.catch(error => {
+    console.error(`Backend connection failed: ${error.message}`);
+});
+
 // Toggle between login and register forms
 loginBtn.addEventListener('click', () => {
     container.classList.remove('active');
@@ -49,44 +61,106 @@ registerForm.addEventListener('submit', async (e) => {
     }
 });
 
-// Login function
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Fix login form selection and event handling
+document.addEventListener('DOMContentLoaded', function() {
+    // For direct debugging
+    console.log('DOM fully loaded');
     
-    // Get the email and password values directly from the form inputs
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    // Test backend connection
+    console.log(`Testing connection to backend at ${API_URL}`);
+    fetch(`${API_URL}/api/test`, {
+        method: 'GET'
+    })
+    .then(response => {
+        console.log(`Backend connection test status: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Backend test response:', data);
+    })
+    .catch(error => {
+        console.error(`Backend connection failed: ${error.message}`);
+    });
     
-    console.log('Attempting login with:', { email, password: '***' });
-
-    try {
-        const response = await fetch(`${API_URL}/api/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                email,
-                password
-            })
-        });
-
-        const data = await response.json();
-        console.log('Login response status:', response.status);
-        console.log('Login response data:', data);
+    // Fix login form submission
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        console.log('Login form found, attaching event listener');
         
-        if (response.ok) {
-            localStorage.setItem('jwt', data.jwt);
-            // Set a flag that this is a fresh login
-            sessionStorage.setItem('freshLogin', 'true');
-            window.location.href = '/mainpage/mainpage.html';
-        } else {
-            alert(data.detail || data.message || 'Login failed!');
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        alert('Error during login! Please check the console for details.');
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Login form submitted');
+            
+            // Get credentials
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            // Clear previous error
+            const errorElement = document.getElementById('login-error');
+            if (errorElement) {
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            }
+            
+            console.log(`Attempting login with email: ${email}`);
+            
+            // Show loading state
+            if (errorElement) {
+                errorElement.textContent = 'Logging in...';
+                errorElement.style.display = 'block';
+                errorElement.style.color = '#0066cc';
+            }
+            
+            // Send login request
+            fetch(`${API_URL}/api/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    password
+                }),
+                credentials: 'include'
+            })
+            .then(response => {
+                console.log(`Login response status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Login response:', data);
+                if (data.jwt) {
+                    // Store JWT token
+                    localStorage.setItem('jwt', data.jwt);
+                    
+                    // Initialize userData object if needed
+                    let userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                    
+                    // Store basic user data if available in the response
+                    if (data.name) userData.name = data.name;
+                    if (data.email) userData.email = data.email;
+                    if (data.image_url) userData.image_url = data.image_url;
+                    
+                    // Save updated userData
+                    localStorage.setItem('userData', JSON.stringify(userData));
+                    
+                    // Redirect to main page
+                    window.location.href = '/mainpage/mainpage.html';
+                } else {
+                    throw new Error('Login failed - no token received');
+                }
+            })
+            .catch(err => {
+                console.error('Login error:', err);
+                if (errorElement) {
+                    errorElement.textContent = err.message || 'Login failed';
+                    errorElement.style.display = 'block';
+                    errorElement.style.color = 'red';
+                }
+            });
+        });
+    } else {
+        console.error('Login form not found!');
     }
 });
 

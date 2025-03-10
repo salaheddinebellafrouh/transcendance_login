@@ -213,4 +213,269 @@ main {
     .game-canvas, .tournament-bracket {
         height: 350px;
     }
+}
+
+/* Profile View Styles */
+.profile-container {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 2rem;
+    max-width: 800px;
+    width: 100%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-avatar-container {
+    flex-shrink: 0;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 3px solid #ff69b4;
+    object-fit: cover;
+    box-shadow: 0 0 20px rgba(255, 105, 180, 0.3);
+}
+
+.profile-info h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.profile-info p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.profile-button {
+    padding: 0.8rem 1.5rem;
+    border-radius: 30px;
+    border: none;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.logout-button {
+    background: linear-gradient(45deg, #ff69b4 0%, #032a6c 100%);
+    color: white;
+}
+
+.logout-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+}
+
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Profile edit styles */
+.profile-avatar-container {
+    position: relative;
+}
+
+.avatar-edit-overlay {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: rgba(255, 105, 180, 0.7);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.avatar-edit-overlay:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.avatar-edit-btn {
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.profile-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.edit-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-left: 1rem;
+    transition: all 0.3s ease;
+}
+
+.edit-btn:hover {
+    color: #ff69b4;
+    transform: scale(1.1);
+}
+
+.edit-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.profile-input {
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: white;
+    font-size: 1rem;
+}
+
+.save-field-btn, .cancel-field-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.save-field-btn {
+    color: #4caf50;
+}
+
+.cancel-field-btn {
+    color: #f44336;
+}
+
+.save-field-btn:hover, .cancel-field-btn:hover {
+    transform: scale(1.2);
+}
+
+.save-button {
+    background: linear-gradient(45deg, #4caf50, #2196f3);
+    color: white;
+}
+
+.save-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.update-status {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    text-align: center;
+    display: none;
+}
+
+.update-status.success {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    display: block;
+}
+
+.update-status.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    display: block;
+}
+
+/* Password change section */
+.password-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title-small {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #fff;
+}
+
+.password-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 500px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.password-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.profile-input[type="password"] {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: white;
+    font-size: 1rem;
+}
+
+.profile-input[type="password"]:focus {
+    border-color: #ff69b4;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 105, 180, 0.2);
+}
+
+.password-instructions {
+    margin-bottom: 1.2rem;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 105, 180, 0.1);
+    padding: 0.8rem;
+    border-radius: 8px;
+    border-left: 3px solid #ff69b4;
+    font-size: 0.9rem;
 } 
