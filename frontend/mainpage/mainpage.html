@@ -41,6 +41,10 @@
                     <h2 data-i18n="game.play">Play</h2>
                     <span class="mode-title" data-i18n="tournament.tournament">Tournament</span>
                 </div>
+                <div class="mode-card spa-link" data-path="/space-shooter">
+                    <h2 data-i18n="game.play">Play</h2>
+                    <span class="mode-title">Space Shooter</span>
+                </div>
             </div>
         </main>
     </div>
@@ -266,6 +270,38 @@
                             <!-- Password update status message -->
                             <div id="passwordUpdateStatus" class="update-status"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Update Space Shooter View -->
+    <div id="spaceShooterView" class="view" style="display:none;">
+        <button class="back-button spa-link" data-path="/home">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </button>
+        <main>
+            <h1 class="section-title">Space Shooter</h1>
+            <div class="game-frame">
+                <h2>Space Defender</h2>
+                <div class="game-container">
+                    <canvas id="gameCanvas"></canvas>
+                    <div class="hud">
+                        <div class="hp-container">
+                            <span class="hp-text">HP:</span>
+                            <span class="hp-value" id="hp">3</span>
+                        </div>
+                    </div>
+                    <div class="game-over" id="gameOver">
+                        <h2>GAME OVER</h2>
+                        <button class="restart-btn" id="restartBtn">Play Again</button>
+                    </div>
+                </div>
+                <div class="game-controls">
+                    <p>Controls: Arrow keys to move, Spacebar to shoot</p>
+                    <div class="controls-section">
+                        <button class="restart-btn" id="restartGameBtn">Restart Game</button>
                     </div>
                 </div>
             </div>

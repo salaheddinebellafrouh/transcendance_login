@@ -87,5 +87,12 @@
     "invalidData": "Données invalides",
     "unknownError": "Erreur inconnue",
     "pleaseRetry": "Veuillez réessayer"
+  },
+  "spaceShooter": {
+    "title": "Jeu Spatial",
+    "hp": "PV",
+    "gameOver": "PARTIE TERMINÉE",
+    "playAgain": "Rejouer",
+    "return": "Retour à l'accueil"
   }
 } 

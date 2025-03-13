@@ -87,5 +87,12 @@
     "invalidData": "Datos inválidos",
     "unknownError": "Error desconocido",
     "pleaseRetry": "Por favor, inténtalo de nuevo"
+  },
+  "spaceShooter": {
+    "title": "Juego Espacial",
+    "hp": "Vida",
+    "gameOver": "FIN DEL JUEGO",
+    "playAgain": "Jugar de nuevo",
+    "return": "Volver al inicio"
   }
 } 

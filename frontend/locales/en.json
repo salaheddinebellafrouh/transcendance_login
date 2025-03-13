@@ -87,5 +87,12 @@
     "invalidData": "Invalid data",
     "unknownError": "Unknown error",
     "pleaseRetry": "Please try again"
+  },
+  "spaceShooter": {
+    "title": "Space Shooter",
+    "hp": "HP",
+    "gameOver": "GAME OVER",
+    "playAgain": "Play Again",
+    "return": "Return to Home"
   }
 } 

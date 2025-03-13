@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Defender</title>
+    <link rel="stylesheet" href="space-shooter.css">
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="hp-container">
+                <span class="hp-text">HP:</span>
+                <span class="hp-value" id="hp">3</span>
+            </div>
+        </div>
+        <div class="game-over" id="gameOver">
+            <h2>GAME OVER</h2>
+            <button class="restart-btn" id="restartBtn">Play Again</button>
+        </div>
+    </div>
+    <script src="space-shooter.js"></script>
+</body>
+</html> 

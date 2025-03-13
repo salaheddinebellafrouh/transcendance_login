@@ -90,19 +90,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Simple SPA navigation
 function initSpaNavigation() {
-    // Add click handlers to all spa-link elements
+    console.log('Initializing SPA navigation...');
+    
+    // Handle link clicks
     document.querySelectorAll('.spa-link').forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', function(e) {
             e.preventDefault();
-            const path = link.getAttribute('data-path');
-            if (path) {
-                if (path === '/game') {
-                    startGame(); // Call startGame function directly for game view
-                } else {
-                    showView(path.replace('/', ''));
-                }
+            
+            const path = this.getAttribute('data-path');
+            console.log(`Link clicked: ${path}`);
+            
+            // Set window location hash to track path
+            window.location.hash = path;
+            
+            // Extract view name from path (remove leading slash)
+            let viewName = path.replace('/', '');
+            
+            // Fix for space-shooter path to match the spaceShooterView ID
+            if (viewName === 'space-shooter') {
+                viewName = 'spaceShooter';
+            }
+            
+            // Show corresponding view
+            if (viewName === 'game') {
+                startGame();
+            } else if (viewName === 'tournament' && path !== '/tournament/match') {
+                showView('tournament');
+            } else {
+                showView(viewName);
             }
         });
+    });
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('hashchange', function() {
+        console.log(`Hash changed: ${window.location.hash}`);
+        
+        // Extract view name from hash
+        let viewName = window.location.hash.replace('#/', '');
+        
+        // Fix for space-shooter path to match the spaceShooterView ID
+        if (viewName === 'space-shooter') {
+            viewName = 'spaceShooter';
+        }
+        
+        if (viewName === 'game') {
+            startGame();
+        } else if (viewName === 'tournament' && window.location.hash !== '#/tournament/match') {
+            showView('tournament');
+        } else if (viewName) {
+            showView(viewName);
+        } else {
+            // Default to home view if hash is empty
+            showView('home');
+        }
     });
 }
 
@@ -112,6 +153,10 @@ function showView(viewName) {
     // Clean up previous view if needed
     if (viewName !== 'game' && window.GameEngine) {
         window.GameEngine.cleanup();
+    }
+    
+    if (viewName !== 'spaceShooter' && window.SpaceShooter) {
+        window.SpaceShooter.cleanup();
     }
     
     // Hide all views
@@ -128,7 +173,7 @@ function showView(viewName) {
     
     viewElement.style.display = 'block';
     
-    // Save current view to localStorage for all views, including game
+    // Save current view to localStorage for all views
     localStorage.setItem('currentView', viewName);
     
     // Handle specific view initialization
@@ -136,6 +181,8 @@ function showView(viewName) {
         // Already being handled by the specific start functions
     } else if (viewName === 'tournament') {
         loadTournamentResources();
+    } else if (viewName === 'spaceShooter') {
+        startSpaceShooter();
     } else if (viewName === 'profile') {
         // Update profile info
         updateProfileInfo();
@@ -841,6 +888,72 @@ function updateLanguageButtons() {
         btn.classList.remove('active');
         if (btn.getAttribute('data-language') === currentLang) {
             btn.classList.add('active');
+        }
+    });
+}
+
+// Helper function to load space shooter resources
+function loadSpaceShooterResources(callback) {
+    console.log("Loading Space Shooter resources");
+    
+    // Check if resources are already loaded
+    if (window.SpaceShooter && document.getElementById('spaceShooterCssLoaded')) {
+        console.log("Space Shooter resources already loaded");
+        callback();
+        return;
+    }
+    
+    // Load CSS
+    if (!document.getElementById('spaceShooterCssLoaded')) {
+        console.log("Loading Space Shooter CSS");
+        const spaceShooterCss = document.createElement('link');
+        spaceShooterCss.id = 'spaceShooterCssLoaded';
+        spaceShooterCss.rel = 'stylesheet';
+        spaceShooterCss.href = '../space-shooter/space-shooter.css';
+        document.head.appendChild(spaceShooterCss);
+    }
+    
+    // Load JS
+    if (!window.SpaceShooter) {
+        console.log("Loading Space Shooter JS");
+        const spaceShooterScript = document.createElement('script');
+        spaceShooterScript.src = '../space-shooter/space-shooter.js';
+        spaceShooterScript.onload = function() {
+            console.log("Space Shooter script loaded");
+            setTimeout(callback, 100); // Give it time to initialize
+        };
+        document.body.appendChild(spaceShooterScript);
+    } else {
+        callback();
+    }
+}
+
+// Start Space Shooter game
+function startSpaceShooter() {
+    console.log("Starting Space Shooter game");
+    
+    // Show space shooter view immediately
+    document.querySelectorAll('.view').forEach(view => {
+        view.style.display = 'none';
+    });
+    
+    const spaceShooterView = document.getElementById('spaceShooterView');
+    if (spaceShooterView) {
+        spaceShooterView.style.display = 'block';
+    } else {
+        console.error("Space Shooter view not found!");
+        return;
+    }
+    
+    // Save view state
+    localStorage.setItem('currentView', 'spaceShooter');
+    
+    // Load resources
+    loadSpaceShooterResources(() => {
+        if (window.SpaceShooter) {
+            window.SpaceShooter.init();
+        } else {
+            console.error("SpaceShooter not found after loading resources!");
         }
     });
 } 
